@@ -1,0 +1,95 @@
+###################################
+### CONFIGURATION DU ROBOT GABE ###
+###################################
+
+$robot_url = "";
+$use_robot_url = 1;
+
+$follow = 1;
+
+$override_robotmeta = 0;
+
+$index_body = 1;
+$index_keywords = 1;
+$index_description = 1;
+
+$show_keywords = 1;
+$show_description = 1;
+$show_author = 1;
+$show_date = 1;
+$show_language = 1;
+$show_url = 1;
+
+$wait = 5;
+$max_wait_time = 30;
+
+$nb_page_server = 40;
+
+$indexing_language = "fr";
+
+$sort_order = 12;
+
+$data_root = "";
+
+@rss_mime_type = (
+"application/rss+xml",
+"text/xml",
+"application/xml",
+"application/rdf+xml",
+);
+
+@mp3_mime_type = (
+"audio/x-mpegurl",
+"audio/mpeg3",
+"audio/x-mpeg-3",
+"audio/x-mpeg",
+"audio/mp3",
+"application/mp3",
+);
+
+@mp4_mime_type = (
+"audio/mp4",
+);
+
+@pdf_mime_type = (
+"application/pdf",
+);
+
+@allowed_mime_type = (
+"text/html",
+"text/plain",
+"text/sgml",
+#"application/pdf",
+"application/vnd.ms-word",
+"application/x-shockwave-flash",
+"application/rss+xml",
+"text/xml",
+"application/xml",
+"application/rdf+xml",
+);
+
+%MIME_TYPES = (
+"text/html","cat __ROBOT_FILE__",
+"text/plain","cat __ROBOT_FILE__",
+"text/sgml","sgml2txt -l __ROBOT_FILE__",
+#"application/pdf","pdftotext __ROBOT_FILE__",
+"application/msword","word2x -f text  __ROBOT_FILE__ -",
+"application/msword-6-7","catdoc -s8859-1 -d8859-1 -a -w -b __ROBOT_FILE__",
+"application/msword-8","catdoc -s8859-1 -d8859-1 -a -w -b __ROBOT_FILE__",
+"application/dbf","dbfdump --fs ' ' --nomemo __ROBOT_FILE__",
+"application/rtf","rtf2html.pl __ROBOT_FILE__",
+"application/x-shockwave-flash","swf2html __ROBOT_FILE__",
+); 
+
+%MIME_EXT = (
+"text/html","html",
+"text/plain","txt",
+"text/sgml","sgml",
+#"application/pdf","pdf",
+"application/msword","doc",
+"application/dbf","dbf",
+"application/rtf","rtf",
+"application/x-shockwave-flash","swf",
+); 
+
+1;
