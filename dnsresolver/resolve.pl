@@ -17,7 +17,7 @@ my $count = 0;
 
 my $resolver = DNSResolver->new(
     max_parallel => 1000,
-    max_retries  => 0,
+    max_retries  => 2,
     timeout      => 1,
     
     # Processing callback
