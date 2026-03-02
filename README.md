@@ -16,13 +16,16 @@ Ce projet est un outil de résolution DNS inverse (PTR) écrit en Perl. Il utili
 - **Propre** : Résultats valides sur `STDOUT`, erreurs horodatées dans `resolver_errors.log`.
 
 ### Lancer via un pipe
+
+```bash
 cat test/test_ips.txt | ./resolve.pl > resultats.csv
 ./resolve.pl < fast_ips.txt
+```
 
 ### Benchmarks avec max_retries = 0
 - **149 IPs** : ~1.01s
 - **4556 IPs** : ~4.05s
-- 
+
 ### Benchmarks avec max_retries = 2
 - **149 IPs** : ~3.01s
 - **4556 IPs** : ~7.37s
