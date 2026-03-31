@@ -1,43 +1,177 @@
-# Perl
+# DNSResolver — Résolution DNS inverse massivement parallèle en Perl
 
-## dmoz
+Résolution PTR asynchrone haute performance, basée sur `AnyEvent::DNS`. Conçu pour traiter des volumes importants d'adresses IP (IPv4 et IPv6) via pipe STDIN, avec gestion des timeouts, des retries, et journalisation des erreurs.
 
-Script permettant à l'époque de l'annuaire DMOZ de vérifier qu'un site était référencé dedans
+---
 
-## Fast Async DNS Resolver (IPv4/IPv6)
+## Prérequis
 
-Ce projet est un outil de résolution DNS inverse (PTR) écrit en Perl. Il utilise une architecture orientée objet et asynchrone pour traiter des volumes massifs d'adresses IP sans saturer la mémoire vive.
+- **Perl** ≥ 5.16
+- Modules CPAN :
 
-### Caractéristiques
-- **Dual-Stack** : Support natif de l'IPv4 et de l'IPv6 (`ip6.arpa`).
-- **Asynchrone** : Basé sur `AnyEvent`, permet des centaines de requêtes simultanées.
-- **Gestion de la mémoire** : Lecture en streaming (ligne à ligne) via les filehandles pour un usage RAM constant.
-- **Fiabilité** : Gestion automatique des tentatives (*retries*) en cas de timeout UDP.
-- **Propre** : Résultats valides sur `STDOUT`, erreurs horodatées dans `resolver_errors.log`.
+| Module | Rôle |
+|---|---|
+| `Moo` | Système objet léger |
+| `AnyEvent` | Boucle d'événements asynchrone |
+| `AnyEvent::DNS` | Résolution DNS non-bloquante |
+| `Net::IP` | Validation et normalisation des adresses IP |
+| `Time::HiRes` | Mesure de temps précise |
+| `namespace::clean` | Nettoyage de l'espace de noms |
 
-### Lancer via un pipe
+Installation via CPAN :
 
 ```bash
-cat test/test_ips.txt | ./resolve.pl > resultats.csv
-./resolve.pl < fast_ips.txt
+cpanm Moo AnyEvent AnyEvent::DNS Net::IP Time::HiRes namespace::clean
 ```
 
-### Benchmarks avec max_retries = 0
-- **149 IPs** : ~1.01s
-- **4556 IPs** : ~4.05s
+---
 
-### Benchmarks avec max_retries = 2
-- **149 IPs** : ~3.01s
-- **4556 IPs** : ~7.37s
+## Structure du projet
 
-## my_detective
+```
+.
+├── DNSResolver.pm          # Module principal — moteur de résolution async
+├── resolve.pl              # Script d'entrée — lecture STDIN, affichage CSV, logging
+├── resolver_errors.log     # Généré à l'exécution (mode append)
+└── test/
+    ├── fast_ips.txt        # 4 556 IPs (IPv4 + IPv6) — test de charge
+    └── test_ips.txt        # 149 IPs — test fonctionnel
+```
 
-Crawler permettant de parcourir les sites internet en Europe avec comme but de catégoriser les sites par pays et aussi suivant certaines thématiques : btp, écologie. Il était question également de récupérer les boutiques en ligne ainsi que les produits commencialisés. On récupère également les documents word, excel, pdf, ... Et enfin, on récupère les mentions légales (coordonnées des entreprises) => projet Utilisé par french-spider.com
+---
 
-## position
+## Utilisation
 
-Utilisé dans des projets en rapport avec le SEO, permettait de récupérer les premières positions de moteur de recherche
+### Entrée standard (mode pipe)
 
-## wikisearch
+```bash
+cat test/test_ips.txt | perl resolve.pl
+```
 
-Récupération des informations de wikipédia pour créer un moteur de recherche qui était utilisé par french-spider.com => sur le site internet, lorsqu'on effectuait un double clic sur un mot, on avait un popup qui s'ouvrait avec la définition.
+### Redirection de la sortie CSV
+
+```bash
+cat test/fast_ips.txt | perl resolve.pl > results.csv
+```
+
+### Avec filtrage des erreurs sur STDERR
+
+```bash
+cat test/fast_ips.txt | perl resolve.pl > results.csv 2>progress.log
+```
+
+---
+
+## Format de sortie
+
+### STDOUT — résolutions réussies (CSV)
+
+```
+1.2.3.4,host.example.com
+2606:4700:4700::1111,one.one.one.one
+```
+
+Chaque ligne contient `IP,hostname`. Si une IP a plusieurs enregistrements PTR, ils sont séparés par des virgules dans la deuxième colonne.
+
+### STDERR — progression (toutes les 1000 IPs)
+
+```
+Processed: 1000
+Processed: 2000
+...
+Terminé ! 4556 IPs traitées en 12.43s (366.53 ips/s)
+```
+
+### `resolver_errors.log` — erreurs (mode append)
+
+```
+[Tue Mar 31 14:22:01 2026] ERROR: 10.0.0.1         -> [TIMEOUT_ERROR]
+[Tue Mar 31 14:22:01 2026] ERROR: 192.0.2.5        -> [NXDOMAIN]
+[Tue Mar 31 14:22:01 2026] ERROR: not_an_ip        -> [INVALID_IP_FORMAT]
+```
+
+---
+
+## Codes d'état
+
+| Code | Signification |
+|---|---|
+| `[NXDOMAIN]` | Pas d'enregistrement PTR pour cette IP |
+| `[TIMEOUT_ERROR]` | Aucune réponse reçue après tous les essais |
+| `[INVALID_IP_FORMAT]` | L'entrée n'est pas une adresse IP valide |
+
+---
+
+## Configuration (`resolve.pl`)
+
+Les paramètres du résolveur sont instanciés dans `resolve.pl` :
+
+```perl
+my $resolver = DNSResolver->new(
+    max_parallel => 1000,   # Nombre de requêtes simultanées
+    max_retries  => 2,      # Tentatives supplémentaires en cas de timeout
+    timeout      => 1,      # Délai par tentative (secondes)
+    on_result    => sub { ... },
+    on_finish    => sub { ... },
+);
+```
+
+| Paramètre | Défaut dans DNSResolver.pm | Valeur dans resolve.pl | Description |
+|---|---|---|---|
+| `max_parallel` | 500 | 1000 | Requêtes DNS simultanées max |
+| `timeout` | 2 | 1 | Timeout par tentative (s) |
+| `max_retries` | 2 | 2 | Nombre de retries après timeout |
+
+> **Note :** `max_outstanding` du résolveur global est automatiquement fixé à `max_parallel * 2` pour éviter le goulot d'étranglement par défaut d'AnyEvent::DNS (10 requêtes).
+
+---
+
+## Fonctionnement interne (`DNSResolver.pm`)
+
+```
+run_from_handle(fh)
+      │
+      ▼
+ _process_next()  ◄─────────────────────────────────────┐
+      │                                                   │
+      │  (remplit jusqu'à max_parallel slots)             │
+      ▼                                                   │
+_resolve_with_retry(ip, attempt=0)                       │
+      │                                                   │
+      ├── AnyEvent::DNS::reverse_lookup  ──► on_result   │
+      │         (succès ou NXDOMAIN)          _active--  ─┘
+      │
+      └── AnyEvent->timer (timeout)
+                │
+                ├── attempt < max_retries ──► retry (attempt+1)
+                │
+                └── sinon ──► on_result([TIMEOUT_ERROR])
+                              _active--  ──► _process_next()
+```
+
+- EDNS0 activé (réponses UDP jusqu'à 4096 octets).
+- La boucle `_cv->recv` / `_cv->send` bloque jusqu'à épuisement complet du fichier et de la file active.
+
+---
+
+## Tests
+
+### Test fonctionnel (149 IPs)
+
+```bash
+cat test/test_ips.txt | perl resolve.pl
+```
+
+### Test de charge (4 556 IPs, IPv4 + IPv6)
+
+```bash
+cat test/fast_ips.txt | perl resolve.pl > /dev/null
+```
+
+Le résumé de performance est affiché sur STDERR en fin d'exécution.
+
+---
+
+## Licence
+
+Projet interne — aucune licence open source définie.
