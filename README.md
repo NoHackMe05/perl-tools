@@ -133,13 +133,13 @@ run_from_handle(fh)
       │
       ▼
  _process_next()  ◄─────────────────────────────────────┐
-      │                                                   │
-      │  (remplit jusqu'à max_parallel slots)             │
-      ▼                                                   │
-_resolve_with_retry(ip, attempt=0)                       │
-      │                                                   │
-      ├── AnyEvent::DNS::reverse_lookup  ──► on_result   │
-      │         (succès ou NXDOMAIN)          _active--  ─┘
+      │                                                 │
+      │  (remplit jusqu'à max_parallel slots)           │
+      ▼                                                 │
+_resolve_with_retry(ip, attempt=0)                      │
+      │                                                 │
+      ├── AnyEvent::DNS::reverse_lookup  ──► on_result  │
+      │         (succès ou NXDOMAIN)          _active--─┘
       │
       └── AnyEvent->timer (timeout)
                 │
